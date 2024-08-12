@@ -1,5 +1,5 @@
 
-converter: 'converters.YoloV8BboxTxtConverter'
+converter: 'core.converters.YoloV8SegmTxtConverter'
 
 backup_params:
   input_dir: 'test'
@@ -8,6 +8,8 @@ backup_params:
   task_name: 'testin'
 
   class_map:
-    # object name, object color (also for segm. mask), type of object in cvat
-    0: ['test', [255, 255, 255], 'polygon']
-
+    # object name, object color (also for segm. mask), type of object for cvat annotations.json
+    0:
+      'name': 'test'
+      'color': [255, 255, 255]
+      'type': 'polygon'

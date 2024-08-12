@@ -1,4 +1,4 @@
-from utils import Config, load_module
+from core.utils import Config, load_module
 
 if __name__ == '__main__':
     cfg = Config('config.yaml')

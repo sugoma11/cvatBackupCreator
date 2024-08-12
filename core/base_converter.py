@@ -4,7 +4,7 @@ import json
 import shutil
 import zipfile
 from abc import ABC, abstractmethod
-from pydantic_classes import BackupRoot
+from core.pydantic_classes import BackupRoot
 
 
 class BaseConverter(ABC):
@@ -38,7 +38,7 @@ class BaseConverter(ABC):
             # get name without file extension (jpg, png)
             # so strange way because there may be '.' in fnames
             name, ext = '.'.join(f.split('.')[:-1]), f.split('.')[-1]
-            h, w, _ = cv2.imread(os.path.join(self.input_dir), f).shape
+            h, w, _ = cv2.imread(os.path.join(self.input_dir, f)).shape
             lines.append({
                 "name": name,
                 "extension": ext,
@@ -108,11 +108,11 @@ class BaseConverter(ABC):
             with zipfile.ZipFile(zip_file_path, 'a', compression=zipfile.ZIP_DEFLATED) as zipf:
                 for root, dirs, files in os.walk(directory_path):
                     for file in files:
-                        file_path = os.path.join(root, file)
-                        zipf.write(file_path, os.path.relpath(file_path, os.path.dirname(directory_path)))
+                        zipf.write(file, os.path.relpath(os.path.join(directory_path, file),
+                                                         os.path.dirname(directory_path)))
             zipf.close()
 
-        zip_file_path = 'script_created_backup.zip'
+        zip_file_path = '../script_created_backup.zip'
         add_directory_to_zip(zip_file_path, 'script_created_backup')
 
         shutil.rmtree('script_created_backup')
