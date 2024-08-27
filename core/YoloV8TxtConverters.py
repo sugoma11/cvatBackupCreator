@@ -2,7 +2,7 @@ import os
 import cv2
 import logging
 from core.base_converter import BaseConverter
-from core.pydantic_classes import BackupRoot, Rectangle
+from core.pydantic_classes import BackupRoot, Rectangle, Polygon
 
 
 class YoloV8BboxTxtConverter(BaseConverter):
@@ -13,7 +13,8 @@ class YoloV8BboxTxtConverter(BaseConverter):
         self.image_quality = image_quality
         self.task_name = task_name
 
-    def check_dataset_consistency(self, input_dir: str) -> [tuple[tuple, tuple]]:
+    @staticmethod
+    def check_dataset_consistency(input_dir: str) -> [tuple[tuple, tuple]]:
 
         txt_and_image_dict = {}
         image_fnames = set()
@@ -30,11 +31,11 @@ class YoloV8BboxTxtConverter(BaseConverter):
                     logging.warning(f'{f.replace("txt", "jpg")} is duplicated')
                     continue
 
-                elif os.path.isfile(os.path.join(self.input_dir, f.replace('txt', 'png'))):
+                elif os.path.isfile(os.path.join(input_dir, f.replace('txt', 'png'))):
                     txt_and_image_dict[f] = f.replace('txt', 'png')
                     image_fnames.add(f.replace('txt', 'png'))
 
-                elif os.path.isfile(os.path.join(self.input_dir, f.replace('txt', 'jpg'))):
+                elif os.path.isfile(os.path.join(input_dir, f.replace('txt', 'jpg'))):
                     txt_and_image_dict[f] = f.replace('txt', 'jpg')
                     image_fnames.add(f.replace('txt', 'jpg'))
 
@@ -84,7 +85,7 @@ class YoloV8BboxTxtConverter(BaseConverter):
 
         root = BackupRoot(shapes=list_of_objects_to_dump)
         return root
-    
+
     def run(self, *args, **kwargs) -> None:
         valid_txt, valid_ims = self.check_dataset_consistency(self.input_dir)
         root = self.convert_markdown(valid_txt, valid_ims)
@@ -102,7 +103,8 @@ class YoloV8SegmTxtConverter(BaseConverter):
         self.image_quality = image_quality
         self.task_name = task_name
 
-    def check_dataset_consistency(self, input_dir: str) -> [tuple[tuple, tuple]]:
+    @staticmethod
+    def check_dataset_consistency(input_dir: str) -> [tuple[tuple, tuple]]:
 
         txt_and_image_dict = {}
         image_fnames = set()
@@ -119,11 +121,11 @@ class YoloV8SegmTxtConverter(BaseConverter):
                     logging.warning(f'{f.replace("txt", "jpg")} is duplicated')
                     continue
 
-                elif os.path.isfile(os.path.join(self.input_dir, f.replace('txt', 'png'))):
+                elif os.path.isfile(os.path.join(input_dir, f.replace('txt', 'png'))):
                     txt_and_image_dict[f] = f.replace('txt', 'png')
                     image_fnames.add(f.replace('txt', 'png'))
 
-                elif os.path.isfile(os.path.join(self.input_dir, f.replace('txt', 'jpg'))):
+                elif os.path.isfile(os.path.join(input_dir, f.replace('txt', 'jpg'))):
                     txt_and_image_dict[f] = f.replace('txt', 'jpg')
                     image_fnames.add(f.replace('txt', 'jpg'))
 
@@ -161,7 +163,7 @@ class YoloV8SegmTxtConverter(BaseConverter):
                     coords = line[1:]
                     coords = [int(coords[i] * w) if i % 2 else int(coords[i] * h) for i in range(len(coords))]
 
-                    bbox = Rectangle(frame=i, points=coords, label=self.class_map[cls]['name'])
+                    bbox = Polygon(frame=i, points=coords, label=self.class_map[cls]['name'])
 
                     list_of_objects_to_dump.append(bbox.dict())
 

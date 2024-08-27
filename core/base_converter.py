@@ -19,49 +19,53 @@ class BaseConverter(ABC):
 
     @staticmethod
     def create_annotations(root=BackupRoot) -> None:
-        with open('script_created_annotations.json', 'w') as outfile:
-            json.dump([root.dict()], outfile)
+
+        with open('script_created_annotations.json', 'w') as fp:
+            fp.write(json.dumps([root.model_dump()], indent=2))
 
     def create_manifest_and_index(self, valid_ims: list) -> None:
+
+        valid_ims.sort()
 
         lines = [
             {"version": "1.1"},
             {"type": "images"}
         ]
 
-        # structure of index.json in cvat: https://github.com/cvat-ai/cvat/issues/7157#issuecomment-1820549030
-        frame_cnt = 0
-        index = 36
-        index_dict = {frame_cnt: index}
-
-        for f in valid_ims:
+        for i, im_fname in enumerate(valid_ims):
             # get name without file extension (jpg, png)
-            # so strange way because there may be '.' in fnames
-            name, ext = '.'.join(f.split('.')[:-1]), f.split('.')[-1]
-            h, w, _ = cv2.imread(os.path.join(self.input_dir, f)).shape
+            # so strange way because there may be '.' and in fnames
+            name, ext = '.'.join(im_fname.split('.')[:-1]), im_fname.split('.')[-1]
+            h, w, _ = cv2.imread(os.path.join(self.input_dir, im_fname)).shape
             lines.append({
-                "name": name,
-                "extension": ext,
+                "name": name.split('/')[-1],
+                "extension": '.' + ext,
                 "width": w,
                 "height": h,
                 "meta": {"related_images": []}
             })
-            frame_cnt += 1
-            index_dict[frame_cnt] = index + len(str(lines[-1]))
 
         with open('script_created_manifest.jsonl', 'w') as outfile:
             for entry in lines:
-                json.dump(entry, outfile)
+                json.dump(entry, outfile, separators=(',', ':'))
                 outfile.write('\n')
 
+        # structure of index.json in cvat: https://github.com/cvat-ai/cvat/issues/7157#issuecomment-1820549030
+        index_dict = {}
+        with open('script_created_manifest.jsonl', 'r') as infile:
+            for line in infile:
+                pass
+
         with open('script_created_index.json', 'w') as fp:
-            fp.write(json.dumps(index_dict))
+            fp.write(json.dumps(index_dict, separators=(',', ':')))
 
     def create_task(self, backup_name: str, image_quality: int, number_of_images: int) -> None:
 
         task_dict = {
             "name": backup_name,
-            "labels": [],
+
+            "labels": [{"name": obj['name'], "color": '#%02x%02x%02x' % tuple(obj['color']), "type": obj['type'],
+                        "sublabels": [], "attributes": []} for obj in self.class_map.values()],
 
             "bug_tracker": "",
             "status": "annotation",
@@ -102,23 +106,29 @@ class BaseConverter(ABC):
         shutil.move('script_created_annotations.json', os.path.join('script_created_backup', 'annotations.json'))
 
         for f in valid_ims:
-            shutil.copy(os.path.join(self.input_dir, f), os.path.join('script_created_backup/data', f))
+            shutil.copy(os.path.join(self.input_dir, f), os.path.join('script_created_backup/data', f.split('/')[-1]))
 
-        def add_directory_to_zip(zip_file_path, directory_path):
-            with zipfile.ZipFile(zip_file_path, 'a', compression=zipfile.ZIP_DEFLATED) as zipf:
-                for root, dirs, files in os.walk(directory_path):
-                    for file in files:
-                        zipf.write(file, os.path.relpath(os.path.join(directory_path, file),
-                                                         os.path.dirname(directory_path)))
-            zipf.close()
+        def zip_files_and_dir(zip_name, files, directory):
+            with zipfile.ZipFile(zip_name, 'w') as zipf:
+                # Add files to the zip
+                for file in files:
+                    zipf.write(file, os.path.basename(file))
 
-        zip_file_path = '../script_created_backup.zip'
-        add_directory_to_zip(zip_file_path, 'script_created_backup')
+                # Add all files from the directory to the zip
+                for root, _, filenames in os.walk(directory):
+                    for filename in filenames:
+                        file_path = os.path.join(root, filename)
+                        zipf.write(file_path, os.path.join('data', filename))
 
-        shutil.rmtree('script_created_backup')
+        files_to_zip = ['script_created_backup/task.json', 'script_created_backup/annotations.json']
+        directory_to_zip = 'script_created_backup/data'
+        zip_name = 'self_created_backup.zip'
 
+        zip_files_and_dir(zip_name, files_to_zip, directory_to_zip)
+
+    @staticmethod
     @abstractmethod
-    def check_dataset_consistency(self, input_dir: str) -> [tuple[list, list]]:
+    def check_dataset_consistency(input_dir: str) -> [tuple[list, list]]:
         pass
 
     @abstractmethod

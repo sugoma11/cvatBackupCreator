@@ -1,8 +1,8 @@
 
-converter: 'core.converters.YoloV8SegmTxtConverter'
+converter: 'core.SegmentMaskConverter.SegmentMaskConverter'
 
 backup_params:
-  input_dir: 'test'
+  input_dir: '../raw'
 
   image_quality: 100
   task_name: 'testin'
