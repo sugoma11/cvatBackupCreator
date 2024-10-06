@@ -1,11 +1,12 @@
+# WARNING. Never use black with CVAT Segmentation masks beacuse BG in CVAT Segm. mask is black
 
 converter: 'core.SegmentMaskConverter.SegmentMaskConverter'
 
 backup_params:
-  input_dir: '../raw'
+  input_dir: '../input'
 
   image_quality: 100
-  task_name: 'testin'
+  task_name: 'first_stable'
 
   class_map:
     # object name, object color (also for segm. mask), type of object for cvat annotations.json
@@ -13,3 +14,8 @@ backup_params:
       'name': 'test'
       'color': [255, 255, 255]
       'type': 'polygon'
+
+    1:
+      'name': 'green'
+      'color': [0, 255, 0]
+      'type': polygon

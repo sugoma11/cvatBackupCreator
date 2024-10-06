@@ -57,9 +57,8 @@ class SegmentMaskConverter(BaseConverter):
                 continue
 
             for label, color in labels_colors.items():
-                current_label_mask = np.where(mask == color, 255, 0).astype('uint8')
-                current_label_mask = cv2.cvtColor(current_label_mask, cv2.COLOR_BGR2GRAY)
 
+                current_label_mask = cv2.inRange(mask, np.array(color), np.array(color))
                 contours, _ = cv2.findContours(current_label_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
                 for cont in contours:
@@ -75,7 +74,7 @@ class SegmentMaskConverter(BaseConverter):
     def run(self, *args, **kwargs) -> None:
         valid_labels, valid_images = self.check_dataset_consistency(self.input_dir)
         root = self.convert_markdown(valid_labels, valid_images)
-        self.create_manifest_and_index(valid_images)
+        self.create_manifest(valid_images)
         self.create_task(self.task_name, self.image_quality, len(valid_labels))
         self.create_annotations(root)
         self.create_backup(valid_images)
@@ -83,9 +82,9 @@ class SegmentMaskConverter(BaseConverter):
 
 if __name__ == '__main__':
 
-    from utils import Config
+    from config_utils import Config
 
-    cfg = Config('../config.yaml')
+    cfg = Config('../rgb_masks_config.yaml')
     converter = SegmentMaskConverter(**cfg.backup_params)
 
     converter.run()

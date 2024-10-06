@@ -12,7 +12,7 @@ class BaseConverter(ABC):
     def run(self, *args, **kwargs) -> None:
         self.check_dataset_consistency(*args, **kwargs)
         self.convert_markdown(*args, **kwargs)
-        self.create_manifest_and_index(*args, **kwargs)
+        self.create_manifest(*args, **kwargs)
         self.create_task(*args, **kwargs)
         self.create_annotations(*args, **kwargs)
         self.create_backup(*args, **kwargs)
@@ -23,7 +23,7 @@ class BaseConverter(ABC):
         with open('script_created_annotations.json', 'w') as fp:
             fp.write(json.dumps([root.model_dump()], indent=2))
 
-    def create_manifest_and_index(self, valid_ims: list) -> None:
+    def create_manifest(self, valid_ims: list) -> None:
 
         valid_ims.sort()
 
@@ -36,7 +36,7 @@ class BaseConverter(ABC):
             # get name without file extension (jpg, png)
             # so strange way because there may be '.' and in fnames
             name, ext = '.'.join(im_fname.split('.')[:-1]), im_fname.split('.')[-1]
-            h, w, _ = cv2.imread(os.path.join(self.input_dir, im_fname)).shape
+            h, w, _ = cv2.imread(im_fname).shape
             lines.append({
                 "name": name.split('/')[-1],
                 "extension": '.' + ext,
@@ -45,19 +45,12 @@ class BaseConverter(ABC):
                 "meta": {"related_images": []}
             })
 
+
         with open('script_created_manifest.jsonl', 'w') as outfile:
             for entry in lines:
                 json.dump(entry, outfile, separators=(',', ':'))
                 outfile.write('\n')
 
-        # structure of index.json in cvat: https://github.com/cvat-ai/cvat/issues/7157#issuecomment-1820549030
-        index_dict = {}
-        with open('script_created_manifest.jsonl', 'r') as infile:
-            for line in infile:
-                pass
-
-        with open('script_created_index.json', 'w') as fp:
-            fp.write(json.dumps(index_dict, separators=(',', ':')))
 
     def create_task(self, backup_name: str, image_quality: int, number_of_images: int) -> None:
 
@@ -101,12 +94,11 @@ class BaseConverter(ABC):
 
         os.makedirs('script_created_backup/data')
         shutil.move('script_created_manifest.jsonl', os.path.join('script_created_backup/data', 'manifest.jsonl'))
-        shutil.move('script_created_index.json', os.path.join('script_created_backup/data', 'index.json'))
         shutil.move('script_created_task.json', os.path.join('script_created_backup', 'task.json'))
         shutil.move('script_created_annotations.json', os.path.join('script_created_backup', 'annotations.json'))
 
         for f in valid_ims:
-            shutil.copy(os.path.join(self.input_dir, f), os.path.join('script_created_backup/data', f.split('/')[-1]))
+            shutil.copy(f, os.path.join('script_created_backup/data', f.split('/')[-1]))
 
         def zip_files_and_dir(zip_name, files, directory):
             with zipfile.ZipFile(zip_name, 'w') as zipf:

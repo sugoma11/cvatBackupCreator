@@ -89,7 +89,7 @@ class YoloV8BboxTxtConverter(BaseConverter):
     def run(self, *args, **kwargs) -> None:
         valid_txt, valid_ims = self.check_dataset_consistency(self.input_dir)
         root = self.convert_markdown(valid_txt, valid_ims)
-        self.create_manifest_and_index(valid_ims)
+        self.create_manifest(valid_ims)
         self.create_task(self.task_name, self.image_quality, len(valid_txt))
         self.create_annotations(root)
         self.create_backup(valid_ims)
@@ -122,11 +122,11 @@ class YoloV8SegmTxtConverter(BaseConverter):
                     continue
 
                 elif os.path.isfile(os.path.join(input_dir, f.replace('txt', 'png'))):
-                    txt_and_image_dict[f] = f.replace('txt', 'png')
+                    txt_and_image_dict[os.path.join(input_dir, f)] = os.path.join(input_dir, f.replace('txt', 'png'))
                     image_fnames.add(f.replace('txt', 'png'))
 
                 elif os.path.isfile(os.path.join(input_dir, f.replace('txt', 'jpg'))):
-                    txt_and_image_dict[f] = f.replace('txt', 'jpg')
+                    txt_and_image_dict[os.path.join(input_dir, f)] = os.path.join(input_dir, f.replace('txt', 'jpg'))
                     image_fnames.add(f.replace('txt', 'jpg'))
 
                 else:
@@ -146,7 +146,7 @@ class YoloV8SegmTxtConverter(BaseConverter):
 
         for i, im_fname in enumerate(valid_ims):
 
-            im = cv2.imread(os.path.join(self.input_dir, im_fname))
+            im = cv2.imread(im_fname)
 
             if im is None:
                 logging.warning(f'ERROR at {im_fname}')
@@ -154,14 +154,14 @@ class YoloV8SegmTxtConverter(BaseConverter):
 
             h, w, _ = im.shape
 
-            with open(os.path.join(self.input_dir, valid_labels[i])) as inf:
+            with open(valid_labels[i]) as inf:
 
                 for line in inf:
                     line = list(map(float, line.strip().split(' ')))
                     cls = line[0]
 
                     coords = line[1:]
-                    coords = [int(coords[i] * w) if i % 2 else int(coords[i] * h) for i in range(len(coords))]
+                    coords = [int(coords[i] * h) if i % 2 else int(coords[i] * w) for i in range(len(coords))]
 
                     bbox = Polygon(frame=i, points=coords, label=self.class_map[cls]['name'])
 
@@ -173,7 +173,17 @@ class YoloV8SegmTxtConverter(BaseConverter):
     def run(self, *args, **kwargs) -> None:
         valid_txt, valid_ims = self.check_dataset_consistency(self.input_dir)
         root = self.convert_markdown(valid_txt, valid_ims)
-        self.create_manifest_and_index(valid_ims)
+        self.create_manifest(valid_ims)
         self.create_task(self.task_name, self.image_quality, len(valid_txt))
         self.create_annotations(root)
         self.create_backup(valid_ims)
+
+
+if __name__ == '__main__':
+
+    from config_utils import Config
+
+    cfg = Config('../yolov8txt_config.yaml')
+    converter = YoloV8SegmTxtConverter(**cfg.backup_params)
+
+    converter.run()
